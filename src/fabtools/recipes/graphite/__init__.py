@@ -33,45 +33,46 @@ def install_graphite(target_dir='/opt/graphite', local_port=6000,
     require.directory(target_dir, owner=env.user, use_sudo=True)
     require.python.virtualenv(target_dir)
 
-    with virtualenv(target_dir):
+    with cd(target_dir):
+        with virtualenv(target_dir):
 
-        # Required Python packages
-        require.python.packages([
-            'whisper',
-            'carbon',
-            'graphite-web',
-            'django',
-            'django-tagging',
-            'gunicorn',
-            'simplejson',
-        ], virtualenv=target_dir)
+            # Required Python packages
+            require.python.packages([
+                'whisper',
+                'carbon',
+                'graphite-web',
+                'django',
+                'django-tagging',
+                'gunicorn',
+                'simplejson',
+            ])
 
-        # Require a recent libcairo
-        require.deb.ppa('ppa:xorg-edgers/ppa')
-        require.deb.package('libcairo2-dev')
+            # Require a recent libcairo
+            require.deb.ppa('ppa:xorg-edgers/ppa')
+            require.deb.package('libcairo2-dev')
 
-        # Require pycairo (which doesn't follow standard packaging practices)
-        if not fabtools.python.is_installed('pycairo'):
-            require.file(url='http://cairographics.org/releases/py2cairo-1.10.0.tar.bz2')
-            run('tar xjf py2cairo-1.10.0.tar.bz2')
-            with cd('py2cairo-1.10.0'):
-                run('python waf configure --prefix="%s"' % target_dir)
-                run('python waf build')
-                run('python waf install')
+            # Require pycairo (which doesn't follow standard packaging practices)
+            if not fabtools.python.is_installed('pycairo'):
+                require.file(url='http://cairographics.org/releases/py2cairo-1.10.0.tar.bz2')
+                run('tar xjf py2cairo-1.10.0.tar.bz2')
+                with cd('py2cairo-1.10.0'):
+                    run('python waf configure --prefix="%s"' % target_dir)
+                    run('python waf build')
+                    run('python waf install')
 
-        # Carbon config file
-        with cd('conf'):
-            if not is_file('carbon.conf'):
-                run('cp carbon.conf.example carbon.conf')
-            require.file('storage-schemas.conf', contents=STORAGE_SCHEMA)
+            # Carbon config file
+            with cd('conf'):
+                if not is_file('carbon.conf'):
+                    run('cp carbon.conf.example carbon.conf')
+                require.file('storage-schemas.conf', contents=STORAGE_SCHEMA)
 
-        # Web app local settings
-        require.file('webapp/graphite/local_settings.py', contents='')
+            # Web app local settings
+            require.file('webapp/graphite/local_settings.py', contents='')
 
-        # Initialize DB
-        if not is_file('webapp/graphite/storage/graphite.db'):
-            with cd('webapp/graphite'):
-                run('python manage.py syncdb --noinput')
+            # Initialize DB
+            if not is_file('webapp/graphite/storage/graphite.db'):
+                with cd('webapp/graphite'):
+                    run('python manage.py syncdb --noinput')
 
     # Run the Carbon daemon
     server = os.path.join(target_dir, 'bin', 'carbon-cache.py')
